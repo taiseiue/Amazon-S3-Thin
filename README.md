@@ -32,6 +32,13 @@ Amazon::S3::Thin - A thin, lightweight, low-level Amazon S3 client
         credential_provider => 'ecs_container',
       });
 
+    # Use S3-compatible services (e.g. MinIO, Wasabi)
+    my $s3client = Amazon::S3::Thin->new({
+        aws_access_key_id     => $aws_access_key_id,
+        aws_secret_access_key => $aws_secret_access_key,
+        endpoint              => 'http://localhost:9000',
+      });
+
     my $bucket = "mybucket";
     my $key = "dir/file.txt";
     my $response;
@@ -129,6 +136,10 @@ are 2 and 4. Default is 4.
 - `debug` - debug option. Default is 0 (false). 
 If set 1, contents of HTTP request and response are shown on stderr
 - `virtual_host` - whether to use virtual-hosted style request format. Default is 0 (path-style).
+- `endpoint` - a custom endpoint URL for S3-compatible services (e.g. MinIO, Wasabi).
+If set, requests will be sent to this endpoint instead of AWS S3.
+The endpoint should include the protocol (e.g. `http://localhost:9000`).
+When `endpoint` is set without `region`, the region defaults to `us-east-1`.
 
 # ACCESSORS
 
