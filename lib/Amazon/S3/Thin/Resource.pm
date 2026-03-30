@@ -47,6 +47,16 @@ sub to_virtual_hosted_style_url {
     );
 }
 
+sub to_endpoint_url {
+    my $self = shift;
+    my $endpoint = shift;
+
+    # remove trailing slash from endpoint
+    $endpoint =~ s{/+$}{};
+
+    return $endpoint . '/' . $self->{bucket} . '/' . $self->key_and_query;
+}
+
 sub _region_specific_host {
     my $self = shift;
     my $region = shift;

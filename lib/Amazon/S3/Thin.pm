@@ -54,9 +54,10 @@ sub new {
     $self->virtual_host(0)          unless defined $self->virtual_host;
 
     $self->{signature_version} = 4  unless defined $self->{signature_version};
-    if ($self->{signature_version} == 4 && ! $self->{region}) {
+    if ($self->{signature_version} == 4 && ! $self->{region} && ! $self->{endpoint}) {
         croak "Please set region when you use signature v4";
     }
+    $self->{region} ||= 'us-east-1' if $self->{endpoint};
 
     $self->{signer} = $self->_load_signer($self->{signature_version});
     return $self;
@@ -296,10 +297,17 @@ sub generate_presigned_post {
         my $resource = $self->_resource($bucket);
         my $protocol = $self->secure ? 'https' : 'http';
 
+        my $url;
+        if ($self->{endpoint}) {
+            $url = $resource->to_endpoint_url($self->{endpoint});
+        } elsif ($self->virtual_host) {
+            $url = $resource->to_virtual_hosted_style_url($protocol);
+        } else {
+            $url = $resource->to_path_style_url($protocol, $self->{region});
+        }
+
         return {
-            ($self->virtual_host
-                ? (url => $resource->to_virtual_hosted_style_url($protocol))
-                : (url => $resource->to_path_style_url($protocol, $self->{region}))),
+            url => $url,
             fields => $self->{signer}->_generate_presigned_post(
                 $bucket, $key, $fields, $conditions, $expires_in
             ),
@@ -349,7 +357,9 @@ sub _compose_request {
 
     my $url;
 
-    if ($self->{signature_version} == 4) {
+    if ($self->{endpoint}) {
+        $url = $resource->to_endpoint_url($self->{endpoint});
+    } elsif ($self->{signature_version} == 4) {
         if ($self->virtual_host) {
             $url = $resource->to_virtual_hosted_style_url($protocol);
         } else {
@@ -525,6 +535,11 @@ are 2 and 4. Default is 4.
 If set 1, contents of HTTP request and response are shown on stderr
 
 =item * C<virtual_host> - whether to use virtual-hosted style request format. Default is 0 (path-style).
+
+=item * C<endpoint> - a custom endpoint URL for S3-compatible services (e.g. MinIO, Wasabi).
+If set, requests will be sent to this endpoint instead of AWS S3.
+The endpoint should include the protocol (e.g. C<http://localhost:9000>).
+When C<endpoint> is set without C<region>, the region defaults to C<us-east-1>.
 
 =back
 
